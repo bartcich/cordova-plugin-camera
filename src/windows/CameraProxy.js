@@ -90,7 +90,15 @@ function resizeImage(successCallback, errorCallback, file, targetWidth, targetHe
     }
 
     var storageFolder = getAppData().localFolder;
+    var orientation = 0;
     file.copyAsync(storageFolder, file.name, Windows.Storage.NameCollisionOption.replaceExisting)
+        .then(function (storageFile) {
+            return storageFile.properties.getImagePropertiesAsync().then(function (props) {
+                orientation = props.orientation;
+                return storageFile;
+            });
+
+        })
         .then(function (storageFile) {
             return fileIO.readBufferAsync(storageFile);
         })
@@ -107,11 +115,25 @@ function resizeImage(successCallback, errorCallback, file, targetWidth, targetHe
                 var canvas = document.createElement('canvas');
                 var storageFileName;
 
-                canvas.width = imageWidth;
-                canvas.height = imageHeight;
+                if (orientation == 6 || orientation == 8) {
+                    canvas.width = imageHeight;
+                    canvas.height = imageWidth;
+                } else {
+                    canvas.width = imageWidth;
+                    canvas.height = imageHeight;
+                }
 
-                canvas.getContext("2d").drawImage(this, 0, 0, imageWidth, imageHeight);
+                canvas.getContext("2d").translate(canvas.width / 2, canvas.height / 2);
 
+                if (orientation == 6) {
+                    canvas.getContext("2d").rotate(90 * Math.PI / 180);
+                } else if (orientation == 8) {
+                    canvas.getContext("2d").rotate(270 * Math.PI / 180);
+                } else if (orientation == 3) {
+                    canvas.getContext("2d").rotate(180 * Math.PI / 180);
+                }
+
+                canvas.getContext("2d").drawImage(this, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
                 var fileContent = canvas.toDataURL(targetContentType).split(',')[1];
 
                 var storageFolder = getAppData().localFolder;
